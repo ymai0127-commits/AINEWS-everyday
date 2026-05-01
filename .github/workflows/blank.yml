@@ -1,36 +1,34 @@
-# This is a basic workflow to help you get started with Actions
+name: AI新闻每日推送系统
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
+  schedule:
+    - cron: '0 1 * * *'   # 每天中国早上9点
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  send-ai-news:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: 获取AI新闻
+        id: news
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          NEWS=$(curl -s https://hnrss.org/newest?q=AI | head -n 40)
+          echo "news<<EOF" >> $GITHUB_OUTPUT
+          echo "$NEWS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 发送邮件
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: 你的邮箱@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: 每日AI新闻
+          to: 你的邮箱@gmail.com
+          from: 你的邮箱@gmail.com
+          body: |
+            今日AI新闻：
+
+            ${{ steps.news.outputs.news }}
